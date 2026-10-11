@@ -521,6 +521,41 @@ impl<T: Transport> GrowR503<T> {
             .ok_or(Error::Protocol("System parameters response data truncated"))
     }
 
+    /// Writes 32 bytes of arbitrary user data into a 32-byte notepad page (0..=15).
+    ///
+    /// The Grow R503 provides 512 bytes of non-volatile user flash memory divided into
+    /// 16 pages of 32 bytes each. Writing to a page overwrites its previous content.
+    pub fn write_notepad(&mut self, page: u8, data: &[u8; 32]) -> Result<(), Error<T::Error>> {
+        if page > 15 {
+            return Err(Error::Device(ConfirmCode::InvalidNotepadPage));
+        }
+        let mut payload = [0u8; 34];
+        payload[0] = CMD_WRITE_NOTEPAD;
+        payload[1] = page;
+        payload[2..34].copy_from_slice(data);
+        self.simple_command(&payload)
+    }
+
+    /// Reads 32 bytes of user data from a 32-byte notepad page (0..=15).
+    ///
+    /// The Grow R503 provides 512 bytes of non-volatile user flash memory divided into
+    /// 16 pages of 32 bytes each.
+    pub fn read_notepad(&mut self, page: u8) -> Result<[u8; 32], Error<T::Error>> {
+        if page > 15 {
+            return Err(Error::Device(ConfirmCode::InvalidNotepadPage));
+        }
+        // Buffer sized for the ACK packet (sync + address + PID + length + code + 32-byte data + checksum = 44 bytes)
+        let mut rx = [0u8; 64];
+        let (code, data) = self.execute_command(&[CMD_READ_NOTEPAD, page], &mut rx)?;
+        ok_or_device(code)?;
+        if data.len() < 32 {
+            return Err(Error::Protocol("Notepad read data truncated"));
+        }
+        let mut out = [0u8; 32];
+        out.copy_from_slice(&data[..32]);
+        Ok(out)
+    }
+
     /// Reads the template index table page (0 to 3), returning a 32-byte bitmap (256 slots).
     ///
     /// Bit value 1 indicates the slot is occupied, 0 indicates empty.
@@ -771,5 +806,52 @@ mod tests {
             sensor.auto_enroll(1, 2),
             Err(Error::Device(ConfirmCode::AlreadyExists))
         );
+    }
+
+    #[test]
+    fn write_notepad_invalid_page_bounds() {
+        let mut sensor = GrowR503::new(MockTransport::new(&[]));
+        assert_eq!(
+            sensor.write_notepad(16, &[0xAA; 32]),
+            Err(Error::Device(ConfirmCode::InvalidNotepadPage))
+        );
+    }
+
+    #[test]
+    fn read_notepad_invalid_page_bounds() {
+        let mut sensor = GrowR503::new(MockTransport::new(&[]));
+        assert_eq!(
+            sensor.read_notepad(16),
+            Err(Error::Device(ConfirmCode::InvalidNotepadPage))
+        );
+    }
+
+    #[test]
+    fn write_notepad_success() {
+        let mut buf = [0u8; 32];
+        let n = ack(0x00, &[], &mut buf);
+        let chunks: [&[u8]; 1] = [&buf[..n]];
+        let mut sensor = GrowR503::new(MockTransport::new(&chunks));
+        assert_eq!(sensor.write_notepad(0, &[0x42; 32]), Ok(()));
+    }
+
+    #[test]
+    fn read_notepad_success() {
+        let expected = [0x5A; 32];
+        let mut buf = [0u8; 64];
+        let n = ack(0x00, &expected, &mut buf);
+        let chunks: [&[u8]; 1] = [&buf[..n]];
+        let mut sensor = GrowR503::new(MockTransport::new(&chunks));
+        assert_eq!(sensor.read_notepad(1), Ok(expected));
+    }
+
+    #[test]
+    fn read_notepad_truncated() {
+        let short_data = [0x5A; 16];
+        let mut buf = [0u8; 64];
+        let n = ack(0x00, &short_data, &mut buf);
+        let chunks: [&[u8]; 1] = [&buf[..n]];
+        let mut sensor = GrowR503::new(MockTransport::new(&chunks));
+        assert!(matches!(sensor.read_notepad(0), Err(Error::Protocol(_))));
     }
 }
