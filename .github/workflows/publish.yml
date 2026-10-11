@@ -53,6 +53,7 @@ jobs:
     needs: check
     if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
+    environment: CRATES_IO_TOKEN
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
