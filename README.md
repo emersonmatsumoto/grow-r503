@@ -55,7 +55,7 @@ Compatible with bare-metal embedded targets (`no_std` on microcontrollers like E
 Add to `Cargo.toml`:
 ```toml
 [dependencies]
-grow-r503 = "0.1.3"
+grow-r503 = "0.1.4"
 serialport = "4.10"
 ```
 
@@ -96,7 +96,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 Enable the `embedded-io` feature:
 ```toml
 [dependencies]
-grow-r503 = { version = "0.1.3", default-features = false, features = ["embedded-io"] }
+grow-r503 = { version = "0.1.4", default-features = false, features = ["embedded-io"] }
 ```
 
 Wrap your HAL UART peripheral implementing `embedded_io::Read` and `embedded_io::Write`:
@@ -114,7 +114,7 @@ let mut sensor = GrowR503::new(transport);
 Disable default features in `Cargo.toml`:
 ```toml
 [dependencies]
-grow-r503 = { version = "0.1.3", default-features = false }
+grow-r503 = { version = "0.1.4", default-features = false }
 ```
 
 Implement the `Transport` trait for your UART peripheral:
