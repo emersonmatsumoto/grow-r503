@@ -1,0 +1,46 @@
+[package]
+name = "grow-r503"
+version = "0.1.1"
+edition = "2021"
+rust-version = "1.81"
+description = "A platform-agnostic driver for the Grow R503 capacitive fingerprint sensor with Aura LED support"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/emersonmatsumoto/grow-r503"
+documentation = "https://docs.rs/grow-r503"
+keywords = ["fingerprint", "r503", "biometrics", "embedded-io", "driver"]
+categories = ["embedded", "hardware-support", "no-std"]
+readme = "README.md"
+include = ["src/**", "README.md", "LICENSE-*"]
+
+[features]
+default = ["std"]
+## `std::error::Error` impls and the `IoTransport` adapter for `std::io::{Read, Write}`.
+std = []
+## `EmbeddedIoTransport` adapter for `embedded_io::{Read, Write}` UARTs.
+embedded-io = ["dep:embedded-io"]
+
+[dependencies]
+embedded-io = { version = "0.7", optional = true, default-features = false }
+
+[dev-dependencies]
+serialport = { version = "4.10", default-features = false }
+
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs"]
+
+[package.metadata.release]
+publish = false
+push = false
+sign-commit = false
+sign-tag = false
+
+[[package.metadata.release.pre-release-replacements]]
+file = "README.md"
+search = 'grow-r503 = "[0-9.]+"'
+replace = 'grow-r503 = "{{version}}"'
+
+[[package.metadata.release.pre-release-replacements]]
+file = "README.md"
+search = 'grow-r503 = \{ version = "[0-9.]+"'
+replace = 'grow-r503 = { version = "{{version}}"'
